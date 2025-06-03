@@ -4,15 +4,13 @@ pyproject.toml
 setup.py
 aks/__init__.py
 aks/ast.py
-aks/context.py
 aks/environment.py
 aks/errors.py
 aks/execution_context.py
 aks/interpreter.py
+aks/interpreter_patched.py
 aks/lexer.py
-aks/memory.py
 aks/parser.py
-aks/reader.py
 aks/runtime.py
 aks/stdlib.py
 aks/tokens.py

@@ -3,9 +3,10 @@
 import argparse
 import logging
 import sys
-from aks.lexer import Lexer
+from aks.lexer import AKSLexer
 from aks.parser import Parser
 from aks.interpreter import Interpreter
+from aks.execution_context import ExecutionContext
 
 logger = logging.getLogger("AkshayaLang")
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
@@ -15,13 +16,17 @@ def run(file_path: str, debug: bool = False):
         with open(file_path, 'r') as f:
             code = f.read()
 
-        lexer = Lexer(code)
+        # Lexing
+        lexer = AKSLexer(code)
         tokens = lexer.tokenize()
 
+        # Parsing
         parser = Parser(tokens)
         ast_nodes = parser.parse()
 
-        interpreter = Interpreter()
+        # Interpretation
+        context = ExecutionContext()
+        interpreter = Interpreter(context)
         for node in ast_nodes:
             result = interpreter.eval(node)
             if result is not None:

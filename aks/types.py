@@ -1,16 +1,12 @@
 """
-aks/types.py
-
-Production-grade symbolic type system for AkshayaLang.
-Defines AKSType, Number, String, Boolean, and Null types.
+types.py — Sovereign Symbolic Type System for AkshayaLang
 """
 
 from abc import ABC, abstractmethod
 
 
 class AKSType(ABC):
-    """Base class for all AKS runtime symbolic types."""
-
+    """Abstract base class for all symbolic types."""
     @abstractmethod
     def type_name(self) -> str:
         pass
@@ -85,9 +81,6 @@ class AKSBoolean(AKSType):
     def __str__(self):
         return "true" if self.value else "false"
 
-    def __bool__(self):
-        return self.value
-
 
 class AKSNull(AKSType):
     def type_name(self) -> str:
@@ -95,6 +88,3 @@ class AKSNull(AKSType):
 
     def __str__(self):
         return "null"
-
-    def __eq__(self, other):
-        return isinstance(other, AKSNull)

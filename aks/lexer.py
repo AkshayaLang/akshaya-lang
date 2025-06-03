@@ -1,82 +1,79 @@
 """
-aks/lexer.py
-
-Production-grade lexer for AkshayaLang.
-Converts raw code into a list of tokens using regular expressions.
+lexer.py — Sovereign Tokenizer for AkshayaLang
 """
 
 import re
-
-TOKEN_REGEX = [
-    ("NUMBER",      r'\d+(\.\d+)?'),
-    ("STRING",      r'".*?"|\'.*?\''),
-    ("IDENTIFIER",  r'[a-zA-Z_][a-zA-Z0-9_]*'),
-    ("ASSIGN",      r'='),
-    ("PLUS",        r'\+'),
-    ("MINUS",       r'-'),
-    ("STAR",        r'\*'),
-    ("SLASH",       r'/'),
-    ("LPAREN",      r'\('),
-    ("RPAREN",      r'\)'),
-    ("COMMA",       r','),
-    ("NEWLINE",     r'\n'),
-    ("SKIP",        r'[ \t]+'),
-    ("MISMATCH",    r'.'),
-]
-
-class Token:
-    def __init__(self, type_, value, position):
-        self.type = type_
-        self.value = value
-        self.position = position
-
-    def __repr__(self):
-        return f"Token({self.type}, {self.value}, {self.position})"
+from aks.tokens import Token, TokenType, KEYWORDS, SINGLE_CHAR_TOKENS
 
 
-class AKSLexer:
-    def __init__(self, code):
-        self.code = code
-        self.tokens = []
-        self.line = 1
-        self.column = 1
+def tokenize(source_code):
+    tokens = []
+    line = 1
+    col = 1
+    pos = 0
+    length = len(source_code)
 
-    def tokenize(self):
-        pattern = '|'.join(f'(?P<{name}>{regex})' for name, regex in TOKEN_REGEX)
-        regex = re.compile(pattern)
-        for match in regex.finditer(self.code):
-            kind = match.lastgroup
-            value = match.group()
-            position = (self.line, self.column)
+    def advance(n=1):
+        nonlocal pos, col
+        pos += n
+        col += n
 
-            if kind == "NUMBER":
-                value = float(value) if '.' in value else int(value)
-                self.tokens.append(Token("NUMBER", value, position))
-            elif kind == "STRING":
-                self.tokens.append(Token("STRING", value.strip('"\''), position))
-            elif kind == "IDENTIFIER":
-                if value == "true":
-                    self.tokens.append(Token("BOOLEAN", True, position))
-                elif value == "false":
-                    self.tokens.append(Token("BOOLEAN", False, position))
-                else:
-                    self.tokens.append(Token("ID", value, position))
-            elif kind in {"ASSIGN", "PLUS", "MINUS", "STAR", "SLASH", "LPAREN", "RPAREN", "COMMA"}:
-                self.tokens.append(Token(kind, value, position))
-            elif kind == "NEWLINE":
-                self.line += 1
-                self.column = 1
-                continue
-            elif kind == "SKIP":
-                pass
-            elif kind == "MISMATCH":
-                raise RuntimeError(f"Unexpected character {value!r} at line {self.line}, column {self.column}")
+    while pos < length:
+        char = source_code[pos]
 
-            self.column += len(match.group())  # ✅ always use original string length
+        # Skip whitespace
+        if char in " \t":
+            advance()
+            continue
 
-        return self.tokens
+        # Newlines
+        if char == "\n":
+            line += 1
+            col = 1
+            pos += 1
+            continue
 
+        # Single-char tokens
+        if char in SINGLE_CHAR_TOKENS:
+            token = Token(SINGLE_CHAR_TOKENS[char], char, (line, col))
+            print(f"[DEBUG] Tokenized: {token.type} - {token.value}")
+            tokens.append(token)
+            advance()
+            continue
 
-def tokenize(code):
-    """Entry function to tokenize raw code."""
-    return AKSLexer(code).tokenize()
+        # Strings
+        if char == '"':
+            end = pos + 1
+            while end < length and source_code[end] != '"':
+                if source_code[end] == "\n":
+                    break
+                end += 1
+            string_val = source_code[pos + 1:end]
+            tokens.append(Token(TokenType.STRING, string_val, (line, col)))
+            advance(end - pos + 1)
+            continue
+
+        # Numbers
+        number_match = re.match(r'\d+(\.\d+)?', source_code[pos:])
+        if number_match:
+            val = float(number_match.group())
+            tokens.append(Token(TokenType.NUMBER, val, (line, col)))
+            advance(len(number_match.group()))
+            continue
+
+        # Identifiers or Keywords
+        id_match = re.match(r'[A-Za-z_][A-Za-z0-9_]*', source_code[pos:])
+        if id_match:
+            val = id_match.group()
+            token_type = KEYWORDS.get(val, TokenType.IDENTIFIER)
+            token = Token(token_type, val, (line, col))
+            print(f"[DEBUG] Tokenized: {token.type} - {token.value}")
+            tokens.append(token)
+            advance(len(val))
+            continue
+
+        # Unknown character
+        raise SyntaxError(f"Unexpected character '{char}' at line {line}, column {col}")
+
+    tokens.append(Token(TokenType.EOF, None, (line, col)))
+    return tokens
