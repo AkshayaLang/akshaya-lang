@@ -80,7 +80,10 @@ class ObjectLiteral(ASTNode):
         self.pairs = pairs  # list of (key, value)
 
     def evaluate(self, context):
-        return {k: v.evaluate(context) for k, v in self.pairs}
+        return {
+            k.value if hasattr(k, 'value') else str(k): v.evaluate(context)
+            for k, v in self.pairs
+        }
 
     def __repr__(self):
         return f"ObjectLiteral({self.pairs})"
@@ -302,5 +305,19 @@ class MirrorStatement(ASTNode):
 
     def evaluate(self, context):
         value = self.expression.evaluate(context)
-        print(f"🔮 {value}")
-        return value
+    
+        def normalize(obj):
+            if isinstance(obj, dict):
+                return {
+                    str(k.name) if isinstance(k, Identifier) else 
+                    str(k.value) if hasattr(k, "value") else str(k):
+                    normalize(v)
+                    for k, v in obj.items()
+                }
+            elif isinstance(obj, list):
+                return [normalize(e) for e in obj]
+            elif hasattr(obj, "value"):
+                return obj.value
+            return obj
+    
+        return normalize(value)

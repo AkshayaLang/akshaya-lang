@@ -78,7 +78,10 @@ def _eval_list(self, context):
     return [element.evaluate(context) for element in self.elements]
 
 def _eval_dict(self, context):
-    return {k.value: v.evaluate(context) for k, v in self.pairs}
+    return {
+        k.evaluate(context) if hasattr(k, "evaluate") else str(k): v.evaluate(context)
+        for k, v in self.pairs
+    }
 
 # ====================
 # Bind evaluations

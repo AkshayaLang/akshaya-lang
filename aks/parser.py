@@ -115,7 +115,7 @@ class Parser:
 
         if token.type == TokenType.IDENTIFIER:
             return Identifier(token.value)
-
+        
         if token.type == TokenType.LPAREN:
             expr = self._parse_expression()
             self._consume(TokenType.RPAREN, "Expected ')' after expression")
@@ -123,16 +123,20 @@ class Parser:
 
         if token.type == TokenType.LBRACE:
             pairs = []
-
             while not self._check(TokenType.RBRACE) and not self._is_at_end():
                 key_token = self._advance()
                 if key_token.type != TokenType.IDENTIFIER and key_token.type != TokenType.STRING:
                     raise ParserError(f"Expected identifier or string as dictionary key, got: {key_token.type}")
-
+                
                 self._consume(TokenType.COLON, "Expected ':' after dictionary key")
-
                 value_expr = self._parse_expression()
-                pairs.append((key_token.value, value_expr))
+
+                if key_token.type == TokenType.STRING:
+                    key_node = StringLiteral(key_token.value)
+                else:
+                    key_node = StringLiteral(key_token.value)  # force identifier to string
+
+                pairs.append((key_node, value_expr))
 
                 if not self._check(TokenType.RBRACE):
                     self._consume(TokenType.COMMA, "Expected ',' or '}' in dictionary literal")
@@ -140,7 +144,11 @@ class Parser:
             self._consume(TokenType.RBRACE, "Expected '}' to close dictionary literal")
             return DictLiteral(pairs)
 
+        if token.type == TokenType.BOOLEAN:
+            return BooleanLiteral(token.value == "true")
+
         raise ParserError(f"Unexpected token: {token.type}")
+        
 
     def _parse_dict_literal(self):
         pairs = []
